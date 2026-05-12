@@ -1,0 +1,107 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  button,
+  [type='button'],
+  [type='reset'],
+  [type='submit'] {
+    appearance: button;
+  }
+
+  [type='search'] {
+    -webkit-appearance: textfield;
+    appearance: textfield;
+  }
+
+  ::-webkit-search-decoration {
+    appearance: none;
+  }
+
+  ::-webkit-file-upload-button {
+    appearance: button;
+  }
+}
+
+body {
+  @apply bg-gray-50 text-gray-900;
+}
+
+/* ── Custom Scrollbar ──────────────────────────────────────── */
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  @apply bg-gray-100 rounded-l;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 rounded hover:bg-gray-400;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-track {
+  @apply bg-gray-100;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 rounded hover:bg-gray-400;
+}
+
+/* ── Print Styles ──────────────────────────────────────────── */
+
+@media print {
+  /* Hide all screen-only elements */
+  header,
+  button,
+  .no-print,
+  .screen-only,
+  [data-print-hide="true"] {
+    display: none !important;
+  }
+
+  /* Show print-only elements */
+  .print-only {
+    display: block !important;
+  }
+
+  /* Reset page setup */
+  @page {
+    margin: 10mm;
+    size: A4;
+  }
+
+  body {
+    background: white !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Force background colors and fonts to print */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Prevent page breaks inside critical sections */
+  .esi-banner,
+  .section,
+  .signature {
+    page-break-inside: avoid;
+  }
+
+  .print-only {
+    font-size: 12px;
+  }
+}
+
+/* Print-only elements hidden on screen */
+.print-only {
+  display: none;
+}
