@@ -6,12 +6,6 @@ Use `pnpm` for package commands.
 
 Before shell commands, prefix with `rtk`.
 
-Core commands:
-- `rtk pnpm install`
-- `rtk pnpm dev`
-- `rtk pnpm build`
-- `rtk pnpm lint`
-
 Read deeper guidance only when relevant:
 - [Tooling and commands](docs/agents/tooling.md)
 - [Frontend conventions](docs/agents/frontend.md)
