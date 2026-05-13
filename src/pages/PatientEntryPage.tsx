@@ -4,8 +4,10 @@ import { AlertCircle, Clock, Search, ShieldCheck, User } from 'lucide-react'
 import { usePatientActions } from '~/hooks/usePatients'
 import { formatDOB } from '~/utils/date'
 import type { Patient, SessionListItem } from '~/types'
+import type { Id } from '../../convex/_generated/dataModel'
 
 interface PatientEntryPageProps {
+  staffUserId: Id<'users'>
   sessions: SessionListItem[]
   onPatientIdentified: (patient: Patient) => void
 }
@@ -18,9 +20,9 @@ function formatGender(gender?: string): string {
   return gender
 }
 
-export function PatientEntryPage({ sessions, onPatientIdentified }: PatientEntryPageProps) {
+export function PatientEntryPage({ staffUserId, sessions, onPatientIdentified }: PatientEntryPageProps) {
   const navigate = useNavigate()
-  const { getPatientByBpjsId, searchPatientsByBpjsIdOrName } = usePatientActions()
+  const { getPatientByBpjsId, searchPatientsByBpjsIdOrName } = usePatientActions(staffUserId)
   const [inputId, setInputId] = useState('')
   const [patient, setPatient] = useState<Patient | null>(null)
   const [error, setError] = useState<string | null>(null)

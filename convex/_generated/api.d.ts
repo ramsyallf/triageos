@@ -10,6 +10,7 @@
 
 import type * as auth from "../auth.js";
 import type * as http from "../http.js";
+import type * as md5 from "../md5.js";
 import type * as patients from "../patients.js";
 import type * as triageSessions from "../triageSessions.js";
 import type * as uploads from "../uploads.js";
@@ -24,6 +25,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   http: typeof http;
+  md5: typeof md5;
   patients: typeof patients;
   triageSessions: typeof triageSessions;
   uploads: typeof uploads;

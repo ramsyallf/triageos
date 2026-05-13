@@ -1,7 +1,7 @@
-import { getAuthUserId } from "@convex-dev/auth/server"
 import { v } from "convex/values"
 import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server"
 import type { Id } from "./_generated/dataModel"
+import { requireStaffById } from "./users"
 
 const vitalSigns = v.object({
   systolicBloodPressure: v.optional(v.number()),
@@ -27,10 +27,9 @@ const generatedTriageNote = v.object({
 
 const triageSessionStatus = v.union(v.literal("draft"), v.literal("generated"), v.literal("completed"))
 
-async function requireUserId(ctx: QueryCtx | MutationCtx): Promise<Id<"users">> {
-  const userId = await getAuthUserId(ctx)
-  if (userId === null) throw new Error("Unauthenticated")
-  return userId
+async function requireStaffId(ctx: QueryCtx | MutationCtx, staffUserId: Id<"users">): Promise<Id<"users">> {
+  await requireStaffById(ctx, staffUserId)
+  return staffUserId
 }
 
 async function requireExistingPatient(ctx: QueryCtx | MutationCtx, patientId: Id<"patients">) {
@@ -41,8 +40,8 @@ async function requireExistingPatient(ctx: QueryCtx | MutationCtx, patientId: Id
   return patient
 }
 
-async function requireOwnSession(ctx: QueryCtx | MutationCtx, sessionId: Id<"triageSessions">) {
-  const userId = await requireUserId(ctx)
+async function requireOwnSession(ctx: QueryCtx | MutationCtx, staffUserId: Id<"users">, sessionId: Id<"triageSessions">) {
+  const userId = await requireStaffId(ctx, staffUserId)
   const session = await ctx.db.get(sessionId)
   if (session === null || session.createdByUserId !== userId) {
     throw new Error("Triage session not found")
@@ -52,6 +51,7 @@ async function requireOwnSession(ctx: QueryCtx | MutationCtx, sessionId: Id<"tri
 
 export const createTriageSessionForPatient = mutation({
   args: {
+    staffUserId: v.id("users"),
     patientId: v.id("patients"),
     anamnesisText: v.string(),
     uploadedPhotoStorageIds: v.array(v.id("_storage")),
@@ -60,12 +60,16 @@ export const createTriageSessionForPatient = mutation({
     status: v.optional(triageSessionStatus),
   },
   handler: async (ctx, args) => {
-    const userId = await requireUserId(ctx)
+    const userId = await requireStaffId(ctx, args.staffUserId)
     await requireExistingPatient(ctx, args.patientId)
     const now = Date.now()
 
     return await ctx.db.insert("triageSessions", {
-      ...args,
+      patientId: args.patientId,
+      anamnesisText: args.anamnesisText,
+      uploadedPhotoStorageIds: args.uploadedPhotoStorageIds,
+      vitalSigns: args.vitalSigns,
+      generatedTriageNote: args.generatedTriageNote,
       createdByUserId: userId,
       status: args.status ?? (args.generatedTriageNote ? "generated" : "draft"),
       createdAt: now,
@@ -78,6 +82,7 @@ export const createTriageSession = createTriageSessionForPatient
 
 export const updateTriageSession = mutation({
   args: {
+    staffUserId: v.id("users"),
     triageSessionId: v.id("triageSessions"),
     anamnesisText: v.optional(v.string()),
     uploadedPhotoStorageIds: v.optional(v.array(v.id("_storage"))),
@@ -86,26 +91,26 @@ export const updateTriageSession = mutation({
     status: v.optional(triageSessionStatus),
   },
   handler: async (ctx, args) => {
-    const { triageSessionId, ...patch } = args
-    await requireOwnSession(ctx, triageSessionId)
+    const { staffUserId, triageSessionId, ...patch } = args
+    await requireOwnSession(ctx, staffUserId, triageSessionId)
     await ctx.db.patch(triageSessionId, { ...patch, updatedAt: Date.now() })
     return triageSessionId
   },
 })
 
 export const getTriageSessionById = query({
-  args: { triageSessionId: v.id("triageSessions") },
+  args: { staffUserId: v.id("users"), triageSessionId: v.id("triageSessions") },
   handler: async (ctx, args) => {
-    const { session } = await requireOwnSession(ctx, args.triageSessionId)
+    const { session } = await requireOwnSession(ctx, args.staffUserId, args.triageSessionId)
     const patient = await ctx.db.get(session.patientId)
     return { ...session, patient }
   },
 })
 
 export const listTriageSessionsByPatient = query({
-  args: { patientId: v.id("patients") },
+  args: { staffUserId: v.id("users"), patientId: v.id("patients") },
   handler: async (ctx, args) => {
-    await requireUserId(ctx)
+    await requireStaffId(ctx, args.staffUserId)
     await requireExistingPatient(ctx, args.patientId)
     return await ctx.db
       .query("triageSessions")
@@ -116,9 +121,9 @@ export const listTriageSessionsByPatient = query({
 })
 
 export const listMyRecentTriageSessions = query({
-  args: { limit: v.optional(v.number()) },
+  args: { staffUserId: v.id("users"), limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
-    const userId = await requireUserId(ctx)
+    const userId = await requireStaffId(ctx, args.staffUserId)
     const sessions = await ctx.db
       .query("triageSessions")
       .withIndex("by_created_by_updated", (q) => q.eq("createdByUserId", userId))

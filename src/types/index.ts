@@ -190,7 +190,6 @@ export type PatientRecord = Patient
 
 export interface StaffUser {
   _id: Id<'users'>
-  googleId?: string
   name?: string
   email?: string
   avatarUrl?: string

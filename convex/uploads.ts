@@ -1,23 +1,24 @@
-import { getAuthUserId } from "@convex-dev/auth/server"
 import { v } from "convex/values"
 import { mutation, type MutationCtx } from "./_generated/server"
+import type { Id } from "./_generated/dataModel"
+import { requireStaffById } from "./users"
 
-async function requireUserId(ctx: MutationCtx) {
-  const userId = await getAuthUserId(ctx)
-  if (userId === null) throw new Error("Unauthenticated")
-  return userId
+async function requireStaffId(ctx: MutationCtx, staffUserId: Id<"users">) {
+  await requireStaffById(ctx, staffUserId)
+  return staffUserId
 }
 
 export const generateUploadUrl = mutation({
-  args: {},
-  handler: async (ctx) => {
-    await requireUserId(ctx)
+  args: { staffUserId: v.id("users") },
+  handler: async (ctx, args) => {
+    await requireStaffId(ctx, args.staffUserId)
     return await ctx.storage.generateUploadUrl()
   },
 })
 
 export const saveUploadedImageMetadata = mutation({
   args: {
+    staffUserId: v.id("users"),
     storageId: v.id("_storage"),
     patientId: v.optional(v.id("patients")),
     triageSessionId: v.optional(v.id("triageSessions")),
@@ -26,9 +27,14 @@ export const saveUploadedImageMetadata = mutation({
     size: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const userId = await requireUserId(ctx)
+    const userId = await requireStaffId(ctx, args.staffUserId)
     return await ctx.db.insert("uploadedImages", {
-      ...args,
+      storageId: args.storageId,
+      patientId: args.patientId,
+      triageSessionId: args.triageSessionId,
+      fileName: args.fileName,
+      contentType: args.contentType,
+      size: args.size,
       uploadedByUserId: userId,
       createdAt: Date.now(),
     })
@@ -37,6 +43,7 @@ export const saveUploadedImageMetadata = mutation({
 
 export const saveUploadedImageToTriageSession = mutation({
   args: {
+    staffUserId: v.id("users"),
     storageId: v.id("_storage"),
     triageSessionId: v.id("triageSessions"),
     fileName: v.optional(v.string()),
@@ -44,7 +51,7 @@ export const saveUploadedImageToTriageSession = mutation({
     size: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const userId = await requireUserId(ctx)
+    const userId = await requireStaffId(ctx, args.staffUserId)
     const session = await ctx.db.get(args.triageSessionId)
     if (session === null || session.createdByUserId !== userId) {
       throw new Error("Triage session not found")

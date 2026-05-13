@@ -1,7 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom'
-import { Authenticated, AuthLoading, Unauthenticated } from 'convex/react'
-import { useAuthActions } from '@convex-dev/auth/react'
 import { SessionProvider, useSession } from '~/contexts/SessionContext'
 import { SpeechProvider } from '~/contexts/SpeechContext'
 import { ToastProvider, useToast } from '~/components/ui/Toast'
@@ -25,12 +23,12 @@ interface ShellProps {
   allSessions: SessionListItem[]
   activeSessionId: string | null
   currentStaff: StaffUser | null | undefined
+  onLogout: () => void
   onSelectSession: (session: SessionListItem) => void
 }
 
-function Shell({ children, allSessions, activeSessionId, currentStaff, onSelectSession }: ShellProps) {
+function Shell({ children, allSessions, activeSessionId, currentStaff, onLogout, onSelectSession }: ShellProps) {
   const { resetTriage, setSelectedPatient } = useSession()
-  const { signOut } = useAuthActions()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const navigate = useNavigate()
   const sessions = allSessions
@@ -87,7 +85,7 @@ function Shell({ children, allSessions, activeSessionId, currentStaff, onSelectS
                 <p className="text-[10px] text-gray-500 truncate">{currentStaff.email}</p>
               </div>
               <button
-                onClick={() => void signOut()}
+                onClick={onLogout}
                 className="text-[10px] font-semibold text-gray-500 hover:text-red-600"
               >
                 Keluar
@@ -173,12 +171,24 @@ function Shell({ children, allSessions, activeSessionId, currentStaff, onSelectS
 
 // ── App Content ─────────────────────────────────────────────
 
-function AppContent() {
+function AppContent({ staffUserId, onLogout }: { staffUserId: Id<'users'>; onLogout: () => void }) {
   const { state, setSelectedPatient, loadSession } = useSession()
   const { addToast } = useToast()
-  const currentStaff = useCurrentUser()
-  const recentSessions = useRecentTriageSessions(25) ?? []
-  const { createTriageSession, updateTriageSession, getTriageSessionById } = useTriageSessionMutations()
+  const currentStaff = useCurrentUser(staffUserId)
+  const recentSessions = useRecentTriageSessions(currentStaff ? staffUserId : null, 25) ?? []
+  const { createTriageSession, updateTriageSession, getTriageSessionById } = useTriageSessionMutations(staffUserId)
+
+  useEffect(() => {
+    if (currentStaff === null) onLogout()
+  }, [currentStaff, onLogout])
+
+  if (currentStaff === undefined || currentStaff === null) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-sm text-gray-500">
+        Memuat sesi staf...
+      </div>
+    )
+  }
 
   const sessionListItems: SessionListItem[] = recentSessions.map(toSessionListItem)
 
@@ -203,6 +213,7 @@ function AppContent() {
 
     if (state.viewingSessionId) {
       await updateTriageSession({
+        staffUserId,
         triageSessionId: state.viewingSessionId as Id<'triageSessions'>,
         ...payload,
       })
@@ -211,6 +222,7 @@ function AppContent() {
     }
 
     const triageSessionId = await createTriageSession({
+      staffUserId,
       patientId: session.convexPatientId,
       ...payload,
     })
@@ -236,6 +248,7 @@ function AppContent() {
         path="/"
         element={
           <PatientEntryPage
+            staffUserId={staffUserId}
             sessions={sessionListItems}
             onPatientIdentified={(patient: Patient) => setSelectedPatient(patient)}
           />
@@ -250,9 +263,11 @@ function AppContent() {
             allSessions={sessionListItems}
             activeSessionId={state.viewingSessionId}
             currentStaff={currentStaff}
+            onLogout={onLogout}
             onSelectSession={handleSelectSession}
           >
             <TriagePage
+              staffUserId={staffUserId}
               onSaveSession={handleSaveSession}
               onBack={() => {
                 setSelectedPatient(null)
@@ -268,23 +283,31 @@ function AppContent() {
 // ── Root ─────────────────────────────────────────────────────
 
 export default function App() {
+  const [staffUserId, setStaffUserId] = useState<Id<'users'> | null>(() => {
+    return (window.localStorage.getItem('triageos-staff-user-id') as Id<'users'> | null) ?? null
+  })
+
+  function handleAuthenticated(staff: StaffUser) {
+    window.localStorage.setItem('triageos-staff-user-id', staff._id)
+    setStaffUserId(staff._id)
+  }
+
+  function handleLogout() {
+    window.localStorage.removeItem('triageos-staff-user-id')
+    setStaffUserId(null)
+  }
+
   return (
     <ErrorBoundary>
       <ToastProvider>
         <SessionProvider>
           <SpeechProvider>
             <BrowserRouter>
-              <AuthLoading>
-                <div className="min-h-screen flex items-center justify-center text-sm text-gray-500">
-                  Memuat autentikasi...
-                </div>
-              </AuthLoading>
-              <Unauthenticated>
-                <LoginPage />
-              </Unauthenticated>
-              <Authenticated>
-                <AppContent />
-              </Authenticated>
+              {staffUserId ? (
+                <AppContent staffUserId={staffUserId} onLogout={handleLogout} />
+              ) : (
+                <LoginPage onAuthenticated={handleAuthenticated} />
+              )}
             </BrowserRouter>
           </SpeechProvider>
         </SessionProvider>

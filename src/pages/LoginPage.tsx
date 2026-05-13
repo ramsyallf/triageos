@@ -1,15 +1,35 @@
-import { useState } from 'react'
-import { useAuthActions } from '@convex-dev/auth/react'
-import { ShieldCheck } from 'lucide-react'
+import { useState, type FormEvent } from 'react'
+import { useMutation } from 'convex/react'
+import { LockKeyhole, Mail, ShieldCheck, UserPlus } from 'lucide-react'
+import { api } from '../../convex/_generated/api'
+import type { StaffUser } from '~/types'
 
-export function LoginPage() {
-  const { signIn } = useAuthActions()
+interface LoginPageProps {
+  onAuthenticated: (staff: StaffUser) => void
+}
+
+export function LoginPage({ onAuthenticated }: LoginPageProps) {
+  const loginWithEmailPassword = useMutation(api.users.loginWithEmailPassword)
+  const createStaffWithEmailPassword = useMutation(api.users.createStaffWithEmailPassword)
+  const [mode, setMode] = useState<'login' | 'register'>('login')
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  async function handleGoogleLogin() {
+  async function handleSubmit(event: FormEvent) {
+    event.preventDefault()
     setIsLoading(true)
+    setError(null)
+
     try {
-      await signIn('google')
+      const staff = mode === 'login'
+        ? await loginWithEmailPassword({ email, password })
+        : await createStaffWithEmailPassword({ name, email, password, role: 'staff' })
+      onAuthenticated(staff)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Gagal masuk. Periksa email dan password.')
     } finally {
       setIsLoading(false)
     }
@@ -29,35 +49,93 @@ export function LoginPage() {
 
         <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
           <div className="bg-primary-600 px-6 py-4">
-            <h1 className="text-base font-semibold text-white">Masuk ke TriageOS</h1>
+            <h1 className="text-base font-semibold text-white">
+              {mode === 'login' ? 'Masuk ke TriageOS' : 'Buat Akun Staf'}
+            </h1>
             <p className="text-xs text-primary-100 mt-0.5">Khusus dokter, perawat, dan staf IGD.</p>
           </div>
 
-          <div className="px-6 py-6 space-y-4">
+          <form onSubmit={handleSubmit} className="px-6 py-6 space-y-4">
+            {mode === 'register' && (
+              <label className="block">
+                <span className="text-xs font-medium text-gray-600">Nama staf</span>
+                <div className="relative mt-1">
+                  <UserPlus className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(event) => setName(event.target.value)}
+                    required
+                    className="w-full pl-10 pr-4 py-3 text-sm rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    placeholder="Nama dokter/staf"
+                  />
+                </div>
+              </label>
+            )}
+
+            <label className="block">
+              <span className="text-xs font-medium text-gray-600">Email</span>
+              <div className="relative mt-1">
+                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  required
+                  className="w-full pl-10 pr-4 py-3 text-sm rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  placeholder="nama@rumahsakit.id"
+                />
+              </div>
+            </label>
+
+            <label className="block">
+              <span className="text-xs font-medium text-gray-600">Password</span>
+              <div className="relative mt-1">
+                <LockKeyhole className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  required
+                  minLength={4}
+                  className="w-full pl-10 pr-4 py-3 text-sm rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  placeholder="Password"
+                />
+              </div>
+            </label>
+
+            {error && (
+              <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
+                {error}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full py-3 rounded-xl bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700 disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1"
+            >
+              {isLoading ? 'Memproses...' : mode === 'login' ? 'Masuk' : 'Buat Akun'}
+            </button>
+
             <button
               type="button"
-              onClick={handleGoogleLogin}
-              disabled={isLoading}
-              className={[
-                'w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl',
-                'border border-gray-200 bg-white text-gray-800 text-sm font-semibold',
-                'hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1',
-                'disabled:opacity-60 disabled:cursor-not-allowed',
-              ].join(' ')}
+              onClick={() => {
+                setMode(mode === 'login' ? 'register' : 'login')
+                setError(null)
+              }}
+              className="w-full text-xs font-semibold text-primary-700 hover:text-primary-800"
             >
-              <span className="flex h-5 w-5 items-center justify-center rounded-full border border-gray-200 text-xs font-bold text-red-500">
-                G
-              </span>
-              {isLoading ? 'Menghubungkan...' : 'Continue with Google'}
+              {mode === 'login' ? 'Belum punya akun staf? Buat akun' : 'Sudah punya akun? Masuk'}
             </button>
 
             <div className="flex items-start gap-2 rounded-xl bg-primary-50 border border-primary-100 px-3 py-3">
               <ShieldCheck className="h-4 w-4 text-primary-600 mt-0.5 flex-shrink-0" />
               <p className="text-xs text-primary-800 leading-relaxed">
-                Akun Google hanya digunakan untuk identitas staf. Pasien dicari dari data yang sudah ada di Convex.
+                Password disimpan sebagai hash MD5 sesuai konfigurasi sementara. Pasien tetap dicari dari data Convex.
               </p>
             </div>
-          </div>
+          </form>
         </div>
       </div>
     </div>

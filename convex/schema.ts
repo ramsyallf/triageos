@@ -40,6 +40,7 @@ export default defineSchema({
     isAnonymous: v.optional(v.boolean()),
     googleId: v.optional(v.string()),
     avatarUrl: v.optional(v.string()),
+    passwordHash: v.optional(v.string()),
     role: v.optional(staffRole),
     createdAt: v.optional(v.number()),
     updatedAt: v.optional(v.number()),

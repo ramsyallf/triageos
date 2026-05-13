@@ -1,17 +1,16 @@
-import { getAuthUserId } from "@convex-dev/auth/server"
 import { v } from "convex/values"
 import { query, type QueryCtx } from "./_generated/server"
+import type { Id } from "./_generated/dataModel"
+import { requireStaffById } from "./users"
 
-async function requireStaff(ctx: QueryCtx) {
-  const userId = await getAuthUserId(ctx)
-  if (userId === null) throw new Error("Unauthenticated")
-  return userId
+async function requireStaff(ctx: QueryCtx, staffUserId: Id<"users">) {
+  return await requireStaffById(ctx, staffUserId)
 }
 
 export const getPatientByBpjsId = query({
-  args: { bpjsId: v.string() },
+  args: { staffUserId: v.id("users"), bpjsId: v.string() },
   handler: async (ctx, args) => {
-    await requireStaff(ctx)
+    await requireStaff(ctx, args.staffUserId)
     const bpjsId = args.bpjsId.trim()
     if (!bpjsId) return null
 
@@ -23,17 +22,17 @@ export const getPatientByBpjsId = query({
 })
 
 export const getPatientById = query({
-  args: { patientId: v.id("patients") },
+  args: { staffUserId: v.id("users"), patientId: v.id("patients") },
   handler: async (ctx, args) => {
-    await requireStaff(ctx)
+    await requireStaff(ctx, args.staffUserId)
     return await ctx.db.get(args.patientId)
   },
 })
 
 export const searchPatientsByBpjsIdOrName = query({
-  args: { search: v.string() },
+  args: { staffUserId: v.id("users"), search: v.string() },
   handler: async (ctx, args) => {
-    await requireStaff(ctx)
+    await requireStaff(ctx, args.staffUserId)
     const search = args.search.trim()
     if (!search) return []
 

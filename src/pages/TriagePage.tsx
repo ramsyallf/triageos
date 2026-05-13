@@ -11,6 +11,7 @@ import type { Patient, TriageNote } from '~/types'
 import type { Id } from '../../convex/_generated/dataModel'
 
 interface TriagePageProps {
+  staffUserId: Id<'users'>
   onSaveSession: (session: {
     patientId: string
     convexPatientId?: Id<'patients'> | null
@@ -35,12 +36,12 @@ function formatGender(gender?: string): string {
   return gender
 }
 
-export function TriagePage({ onSaveSession, onBack }: TriagePageProps) {
+export function TriagePage({ staffUserId, onSaveSession, onBack }: TriagePageProps) {
   const { state } = useSession()
   const navigate = useNavigate()
 
   const { patientId, patientName, selectedPatient, triageNote: contextTriageNote, vitals } = state
-  const convexPatient = usePatientById(state.convexPatientId)
+  const convexPatient = usePatientById(staffUserId, state.convexPatientId)
 
   const [result, setResult] = useState<TriageNote | null>(null)
 
@@ -148,6 +149,7 @@ export function TriagePage({ onSaveSession, onBack }: TriagePageProps) {
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-5 lg:gap-6 items-start">
             {/* Left: Anamnesis + Image + Generate */}
             <TriageForm
+              staffUserId={staffUserId}
               onSaveSession={onSaveSession}
               onResultChange={(r) => {
                 setResult(r)

@@ -14,6 +14,7 @@ import type { Patient, TriageSessionStatus, VitalSignsInput } from '~/types'
 import type { Id } from '../../../convex/_generated/dataModel'
 
 interface TriageFormProps {
+  staffUserId: Id<'users'>
   onSaveSession: (session: {
     patientId: string
     convexPatientId?: Id<'patients'> | null
@@ -30,10 +31,10 @@ interface TriageFormProps {
   onResultChange?: (result: import('~/types').TriageNote | null) => void
 }
 
-export function TriageForm({ onSaveSession, onResultChange }: TriageFormProps) {
+export function TriageForm({ staffUserId, onSaveSession, onResultChange }: TriageFormProps) {
   const { state, setTriageNote, addImage, removeImage, setVitals, canGenerate } = useSession()
   const { generate, result, setResult, loading, error } = useGeminiTriage()
-  const { uploadImages, isUploading, error: uploadError } = useConvexImageUpload()
+  const { uploadImages, isUploading, error: uploadError } = useConvexImageUpload(staffUserId)
   const { addToast } = useToast()
 
   // Use ref to get latest onResultChange without causing effect re-runs

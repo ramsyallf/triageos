@@ -19,7 +19,7 @@ function readAsDataUrl(file: File): Promise<string> {
   })
 }
 
-export function useConvexImageUpload() {
+export function useConvexImageUpload(staffUserId: Id<'users'>) {
   const generateUploadUrl = useMutation(api.uploads.generateUploadUrl)
   const saveUploadedImageMetadata = useMutation(api.uploads.saveUploadedImageMetadata)
   const [isUploading, setIsUploading] = useState(false)
@@ -46,7 +46,7 @@ export function useConvexImageUpload() {
         const uploaded = await Promise.all(
           fileArray.map(async (file) => {
             const [uploadUrl, previewDataUrl] = await Promise.all([
-              generateUploadUrl(),
+              generateUploadUrl({ staffUserId }),
               readAsDataUrl(file),
             ])
             const response = await fetch(uploadUrl, {
@@ -61,6 +61,7 @@ export function useConvexImageUpload() {
 
             const { storageId } = (await response.json()) as { storageId: Id<'_storage'> }
             await saveUploadedImageMetadata({
+              staffUserId,
               storageId,
               fileName: file.name,
               contentType: file.type,
@@ -77,7 +78,7 @@ export function useConvexImageUpload() {
         setIsUploading(false)
       }
     },
-    [generateUploadUrl, saveUploadedImageMetadata]
+    [generateUploadUrl, saveUploadedImageMetadata, staffUserId]
   )
 
   return { uploadImages, isUploading, error }
