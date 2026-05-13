@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { Activity } from 'lucide-react'
 import { useSession } from '~/contexts/SessionContext'
 import { useGeminiTriage } from '~/hooks/useGeminiTriage'
+import { useConvexImageUpload } from '~/hooks/useConvexImageUpload'
 import { TranscriptPanel } from '~/components/input/TranscriptPanel'
 import { ImageAttachmentPanel } from '~/components/input/ImageAttachmentPanel'
 import { VitalSignsForm } from '~/components/triage/VitalSignsForm'
@@ -9,24 +10,30 @@ import { TriageResult } from '~/components/triage/TriageResult'
 import { GenerateButton } from '~/components/triage/GenerateButton'
 import { Card, CardHeader, CardBody } from '~/components/ui/Card'
 import { useToast } from '~/components/ui/Toast'
-import type { VitalSignsInput } from '~/types'
+import type { Patient, TriageSessionStatus, VitalSignsInput } from '~/types'
+import type { Id } from '../../../convex/_generated/dataModel'
 
 interface TriageFormProps {
   onSaveSession: (session: {
     patientId: string
+    convexPatientId?: Id<'patients'> | null
+    selectedPatient?: Patient | null
     patientName?: string
     transcript: string
     images: string[]
+    uploadedPhotoStorageIds?: Id<'_storage'>[]
     triageNote: import('~/types').TriageNote | null
     esiLevel: number | null
     vitals: VitalSignsInput
-  }) => void
+    status?: TriageSessionStatus
+  }) => Promise<Id<'triageSessions'> | null>
   onResultChange?: (result: import('~/types').TriageNote | null) => void
 }
 
 export function TriageForm({ onSaveSession, onResultChange }: TriageFormProps) {
   const { state, setTriageNote, addImage, removeImage, setVitals, canGenerate } = useSession()
   const { generate, result, setResult, loading, error } = useGeminiTriage()
+  const { uploadImages, isUploading, error: uploadError } = useConvexImageUpload()
   const { addToast } = useToast()
 
   // Use ref to get latest onResultChange without causing effect re-runs
@@ -65,21 +72,27 @@ export function TriageForm({ onSaveSession, onResultChange }: TriageFormProps) {
     if (genResult) {
       // Simpan result ke SessionContext agar tidak hilang saat effect clear berjalan
       setTriageNote(genResult)
+      await onSaveSession({
+        patientId: state.patientId,
+        convexPatientId: state.convexPatientId,
+        selectedPatient: state.selectedPatient,
+        patientName: state.patientName || undefined,
+        transcript: combinedTranscript,
+        images,
+        uploadedPhotoStorageIds: state.uploadedPhotoStorageIds,
+        triageNote: genResult,
+        esiLevel: genResult.esiLevel,
+        vitals: state.vitals,
+        status: 'generated',
+      })
+      addToast('success', 'Hasil triage otomatis tersimpan ke Convex.')
     }
     onResultChangeRef.current?.(genResult)
   }
 
-  function handleAddImages(files: FileList | File[]) {
-    Array.from(files).forEach((file) => {
-      if (file.type.startsWith('image/')) {
-        const reader = new FileReader()
-        reader.onload = (e) => {
-          const base64 = e.target?.result as string
-          addImage(base64)
-        }
-        reader.readAsDataURL(file)
-      }
-    })
+  async function handleAddImages(files: FileList | File[]) {
+    const uploadedImages = await uploadImages(files)
+    uploadedImages.forEach((image) => addImage(image.previewDataUrl, image.storageId))
   }
 
   function handleRemoveImage(index: number) {
@@ -93,14 +106,18 @@ export function TriageForm({ onSaveSession, onResultChange }: TriageFormProps) {
   function handleSave() {
     const noteToSave = result
     if (!noteToSave) return
-    onSaveSession({
+    void onSaveSession({
       patientId: state.patientId,
+      convexPatientId: state.convexPatientId,
+      selectedPatient: state.selectedPatient,
       patientName: state.patientName || undefined,
       transcript: combinedTranscript,
       images: images,
+      uploadedPhotoStorageIds: state.uploadedPhotoStorageIds,
       triageNote: noteToSave,
       esiLevel: noteToSave.esiLevel,
       vitals: state.vitals,
+      status: 'completed',
     })
     addToast('success', 'Sesi triage berhasil disimpan ke riwayat.')
     // Clear form after save
@@ -108,8 +125,8 @@ export function TriageForm({ onSaveSession, onResultChange }: TriageFormProps) {
   }
 
   function handleEditNote(updated: import('~/types').TriageNote) {
-    setTriageNote(updated)
-    addToast('info', 'Hasil triage telah diperbarui.')
+      setTriageNote(updated)
+      addToast('info', 'Hasil triage telah diperbarui.')
   }
 
   return (
@@ -141,6 +158,14 @@ export function TriageForm({ onSaveSession, onResultChange }: TriageFormProps) {
             removeImage={handleRemoveImage}
             error={null}
           />
+          {isUploading && (
+            <p className="text-xs text-primary-600 mt-2">Mengunggah gambar ke Convex Storage...</p>
+          )}
+          {uploadError && (
+            <p className="text-xs text-red-600 bg-red-50 px-3 py-2 rounded-lg border border-red-200 mt-2">
+              {uploadError}
+            </p>
+          )}
         </CardBody>
       </Card>
 

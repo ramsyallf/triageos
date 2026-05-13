@@ -10,6 +10,8 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
   },
   "dependencies": {
+    "@auth/core": "^0.37.4",
+    "@convex-dev/auth": "^0.0.92",
     "@google/genai": "^2.0.1",
     "convex": "^1.38.0",
     "lucide-react": "^0.263.1",
