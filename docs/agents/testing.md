@@ -2,7 +2,9 @@
 
 There is no dedicated test script configured yet.
 
-Do not run `pnpm build` or `pnpm lint` after changes by default. Run them only when explicitly requested or when a specific task requires that verification.
+Do not run build or lint automatically after changes. The user will run these manually:
+- `bun run build`
+- `bun run lint`
 
 For UI changes, manually check task-relevant flows when needed:
 - patient entry flow

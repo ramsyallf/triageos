@@ -18,6 +18,7 @@ interface PrintButtonProps {
     painScore?: number
   }
   timestamp?: string
+  nurseName?: string
 }
 
 const ESI_LABELS: Record<number, string> = {
@@ -36,7 +37,7 @@ const ESI_COLORS: Record<number, string> = {
   5: '#2563eb',
 }
 
-export function PrintButton({ note, patientId, patientName, vitals, timestamp }: PrintButtonProps) {
+export function PrintButton({ note, patientId, patientName, vitals, timestamp, nurseName }: PrintButtonProps) {
   const [showMenu, setShowMenu] = useState(false)
 
   function handlePrint() {
@@ -46,7 +47,7 @@ export function PrintButton({ note, patientId, patientName, vitals, timestamp }:
 
   function handleDownloadText() {
     setShowMenu(false)
-    const content = generateTextContent(note, patientId, patientName, vitals, timestamp)
+    const content = generateTextContent(note, patientId, patientName, vitals, timestamp, nurseName)
     downloadFile(content, `triage-note-${patientId}-${Date.now()}.txt`, 'text/plain')
   }
 
@@ -120,7 +121,8 @@ function generateTextContent(
   patientId: string,
   patientName?: string,
   vitals?: any,
-  timestamp?: string
+  timestamp?: string,
+  nurseName?: string
 ): string {
   const date = timestamp ? new Date(timestamp).toLocaleString('id-ID') : new Date().toLocaleString('id-ID')
 

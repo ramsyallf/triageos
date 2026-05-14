@@ -1,8 +1,8 @@
 # TriageOS Agent Guide
 
-TriageOS is a React/Vite TypeScript MVP for Indonesian IGD triage workflows, generating structured ESI triage notes from patient transcripts, images, and vital signs.
+TriageOS is a React/Vite TypeScript MVP for Indonesian IGD triage workflows that generates structured ESI triage notes from transcripts, images, and vital signs.
 
-Use `pnpm` for package commands.
+Use `bun` for package commands.
 
 Before shell commands, prefix with `rtk`.
 

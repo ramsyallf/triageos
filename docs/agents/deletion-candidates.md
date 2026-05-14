@@ -1,6 +1,10 @@
 # Deletion Candidates
 
-These instructions should not be carried into AGENTS.md because they are redundant, vague, or not project-specific.
+Do not carry these into root `AGENTS.md` because they are redundant, vague, or not project-specific.
+
+Remove stale package-manager guidance:
+- `pnpm`
+- references to avoiding `package-lock.json` because Bun is now the chosen package manager
 
 Remove RTK examples for unrelated ecosystems:
 - `rtk cargo test`

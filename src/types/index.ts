@@ -24,6 +24,7 @@ export interface TriageSession {
   id: string
   patientId: string
   convexPatientId?: Id<'patients'>
+  selectedPatient?: Patient | null
   patientName?: string
   patientBpjsId?: string
   transcript: string

@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { useMutation } from 'convex/react'
-import { LockKeyhole, Mail, ShieldCheck, UserPlus } from 'lucide-react'
+import { Lock, Mail, ShieldCheck, UserPlus } from 'lucide-react'
 import { api } from '../../convex/_generated/api'
 import type { StaffUser } from '~/types'
 
@@ -91,7 +91,7 @@ export function LoginPage({ onAuthenticated }: LoginPageProps) {
             <label className="block">
               <span className="text-xs font-medium text-gray-600">Password</span>
               <div className="relative mt-1">
-                <LockKeyhole className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
                   type="password"
                   value={password}

@@ -1,9 +1,9 @@
 # Tooling and Commands
 
-Use `pnpm` as the package manager. `package-lock.json` has been removed intentionally; do not recreate it.
+Use `bun` as the package manager. The repository has `bun.lock`; do not add npm or pnpm lockfiles.
 
 Prefix shell commands with `rtk`.
 
-Imports may use the `~/*` alias for `src/*`.
+Use `~/*` imports for `src/*`.
 
-The project is strict TypeScript with `noUnusedLocals`, `noUnusedParameters`, and `noFallthroughCasesInSwitch` enabled.
+The project uses strict TypeScript with `noUnusedLocals`, `noUnusedParameters`, and `noFallthroughCasesInSwitch` enabled.
