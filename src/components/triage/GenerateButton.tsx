@@ -1,6 +1,5 @@
 import { Sparkles } from 'lucide-react'
 import { Button } from '~/components/ui/Button'
-import { Spinner } from '~/components/ui/Spinner'
 
 interface GenerateButtonProps {
   canGenerate: boolean
@@ -19,10 +18,7 @@ export function GenerateButton({ canGenerate, isLoading, onClick }: GenerateButt
       className="w-full gap-2"
     >
       {isLoading ? (
-        <>
-          <Spinner size="sm" className="text-white" />
-          <span className="text-sm sm:text-base">Menganalisis...</span>
-        </>
+        <span className="text-sm sm:text-base">Menganalisis...</span>
       ) : (
         <>
           <Sparkles className="h-4 w-4 sm:h-5 sm:w-5" />

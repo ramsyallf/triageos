@@ -1,15 +1,17 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom'
 import { SessionProvider, useSession } from '~/contexts/SessionContext'
 import { SpeechProvider } from '~/contexts/SpeechContext'
 import { ToastProvider, useToast } from '~/components/ui/Toast'
 import { ErrorBoundary } from '~/components/ErrorBoundary'
-import { useLocalStorage } from '~/hooks/useLocalStorage'
+import { useCurrentUser } from '~/hooks/useCurrentUser'
+import { useRecentTriageSessions, useTriageSessionMutations } from '~/hooks/useTriageSessions'
 import { PatientEntryPage } from '~/pages/PatientEntryPage'
 import { TriagePage } from '~/pages/TriagePage'
-import type { SessionListItem, TriageSession } from '~/types'
-
-const STORAGE_KEY = 'triageos-sessions'
+import { LoginPage } from '~/pages/LoginPage'
+import { toConvexVitals, toSessionListItem, toTriageSession } from '~/utils/convexMappers'
+import type { Patient, SessionListItem, StaffUser, TriageSavePayload, TriageSession } from '~/types'
+import type { Id } from '../convex/_generated/dataModel'
 
 // ── Sidebar Layout (persistent shell) ──────────────────────
 
@@ -20,19 +22,16 @@ interface ShellProps {
   children: React.ReactNode
   allSessions: SessionListItem[]
   activeSessionId: string | null
+  currentStaff: StaffUser | null | undefined
+  onLogout: () => void
   onSelectSession: (session: SessionListItem) => void
-  onDeleteSession: (sessionId: string) => void
 }
 
-function Shell({ children, allSessions, activeSessionId, onSelectSession, onDeleteSession }: ShellProps) {
-  const { state, resetTriage } = useSession()
+function Shell({ children, allSessions, activeSessionId, currentStaff, onLogout, onSelectSession }: ShellProps) {
+  const { resetTriage, setSelectedPatient } = useSession()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const navigate = useNavigate()
-
-  // Only show sessions for the current patient
-  const sessions = state.patientId
-    ? allSessions.filter((s) => s.patientId === state.patientId)
-    : []
+  const sessions = allSessions
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
@@ -68,10 +67,37 @@ function Shell({ children, allSessions, activeSessionId, onSelectSession, onDele
             </div>
           </div>
 
+          {currentStaff && (
+            <div className="mt-3 flex items-center gap-2 rounded-xl bg-gray-50 border border-gray-100 px-2.5 py-2">
+              {currentStaff.avatarUrl || currentStaff.image ? (
+                <img
+                  src={currentStaff.avatarUrl ?? currentStaff.image}
+                  alt={currentStaff.name ?? 'Staf IGD'}
+                  className="h-8 w-8 rounded-full object-cover"
+                />
+              ) : (
+                <div className="h-8 w-8 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-xs font-bold">
+                  {(currentStaff.name ?? currentStaff.email ?? 'S').slice(0, 1)}
+                </div>
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-semibold text-gray-800 truncate">{currentStaff.name ?? 'Staf IGD'}</p>
+                <p className="text-[10px] text-gray-500 truncate">{currentStaff.email}</p>
+              </div>
+              <button
+                onClick={onLogout}
+                className="text-[10px] font-semibold text-gray-500 hover:text-red-600"
+              >
+                Keluar
+              </button>
+            </div>
+          )}
+
           <button
             onClick={() => {
               resetTriage()
-              navigate('/triage')
+              setSelectedPatient(null)
+              navigate('/')
             }}
             className={[
               'mt-2.5 sm:mt-3 w-full flex items-center justify-center gap-2 py-1.5 sm:py-2 rounded-xl',
@@ -105,12 +131,11 @@ function Shell({ children, allSessions, activeSessionId, onSelectSession, onDele
           ) : (
             <div className="space-y-2 px-2">
               {sessions.map((session) => (
-                <SessionCard
+              <SessionCard
                   key={session.id}
                   session={session}
                   isActive={session.id === activeSessionId}
                   onClick={() => onSelectSession(session)}
-                  onDelete={() => onDeleteSession(session.id)}
                 />
               ))}
             </div>
@@ -146,49 +171,74 @@ function Shell({ children, allSessions, activeSessionId, onSelectSession, onDele
 
 // ── App Content ─────────────────────────────────────────────
 
-function AppContent() {
-  const { state, setPatientId, setPatientName, loadSession } = useSession()
+function AppContent({ staffUserId, onLogout }: { staffUserId: Id<'users'>; onLogout: () => void }) {
+  const { state, setSelectedPatient, loadSession } = useSession()
   const { addToast } = useToast()
+  const currentStaff = useCurrentUser(staffUserId)
+  const recentSessions = useRecentTriageSessions(currentStaff ? staffUserId : null, 25) ?? []
+  const { createTriageSession, updateTriageSession, getTriageSessionById } = useTriageSessionMutations(staffUserId)
 
-  // Load FULL sessions from localStorage (preserves triageNote + images)
-  const [sessions, setSessions] = useLocalStorage<TriageSession[]>(
-    STORAGE_KEY,
-    []
-  )
+  useEffect(() => {
+    if (currentStaff === null) onLogout()
+  }, [currentStaff, onLogout])
 
-  // Derive sidebar list items from full sessions
-  const sessionListItems: SessionListItem[] = sessions.map((s) => ({
-    id: s.id,
-    patientId: s.patientId,
-    patientName: s.patientName,
-    timestamp: s.timestamp,
-    esiLevel: s.esiLevel,
-    transcript: s.transcript,
-  }))
-
-  function handleSelectSession(session: SessionListItem) {
-    const full = sessions.find((s) => s.id === session.id)
-    if (!full) return
-    loadSession(full)
+  if (currentStaff === undefined || currentStaff === null) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-sm text-gray-500">
+        Memuat sesi staf...
+      </div>
+    )
   }
 
-  function handleSaveSession(session: {
-    patientId: string
-    patientName?: string
-    transcript: string
-    images: string[]
-    triageNote: import('~/types').TriageNote | null
-    esiLevel: number | null
-    vitals: import('~/types').VitalSignsInput
-  }) {
-    const newSession: TriageSession = {
-      id: `session-${Date.now()}`,
-      ...session,
-      timestamp: new Date().toISOString(),
+  const sessionListItems: SessionListItem[] = recentSessions.map(toSessionListItem)
+
+  async function handleSelectSession(session: SessionListItem) {
+    const full = await getTriageSessionById(session.id as Id<'triageSessions'>)
+    loadSession(toTriageSession(full))
+  }
+
+  async function handleSaveSession(session: TriageSavePayload): Promise<Id<'triageSessions'> | null> {
+    if (!session.convexPatientId) {
+      addToast('error', 'Data pasien belum tersimpan di Convex.')
+      return null
     }
 
-    setSessions((prev) => [newSession, ...prev])
-    addToast('success', `Sesi triage pasien ${session.patientName ?? session.patientId} berhasil disimpan.`)
+    const payload = {
+      anamnesisText: session.transcript,
+      uploadedPhotoStorageIds: session.uploadedPhotoStorageIds ?? [],
+      vitalSigns: toConvexVitals(session.vitals),
+      generatedTriageNote: session.triageNote ?? undefined,
+      status: session.status ?? (session.triageNote ? 'generated' as const : 'draft' as const),
+    }
+
+    if (state.viewingSessionId) {
+      await updateTriageSession({
+        staffUserId,
+        triageSessionId: state.viewingSessionId as Id<'triageSessions'>,
+        ...payload,
+      })
+      addToast('success', 'Sesi triage berhasil diperbarui di Convex.')
+      return state.viewingSessionId as Id<'triageSessions'>
+    }
+
+    const triageSessionId = await createTriageSession({
+      staffUserId,
+      patientId: session.convexPatientId,
+      ...payload,
+    })
+
+    const savedSession: TriageSession = {
+      id: triageSessionId,
+      ...session,
+      convexPatientId: session.convexPatientId,
+      selectedPatient: session.selectedPatient ?? state.selectedPatient,
+      uploadedPhotoStorageIds: session.uploadedPhotoStorageIds ?? [],
+      timestamp: new Date().toISOString(),
+      status: session.status ?? 'generated',
+    }
+    loadSession(savedSession)
+    addToast('success', `Sesi triage pasien ${session.patientName ?? session.patientId} tersimpan di Convex.`)
+    return triageSessionId
   }
 
   return (
@@ -198,11 +248,11 @@ function AppContent() {
         path="/"
         element={
           <PatientEntryPage
+            staffUserId={staffUserId}
             sessions={sessionListItems}
-            onPatientIdentified={(patientId, patientName) => {
-              setPatientId(patientId)
-              setPatientName(patientName)
-            }}
+            currentStaff={currentStaff}
+            onLogout={onLogout}
+            onPatientIdentified={(patient: Patient) => setSelectedPatient(patient)}
           />
         }
       />
@@ -214,17 +264,15 @@ function AppContent() {
           <Shell
             allSessions={sessionListItems}
             activeSessionId={state.viewingSessionId}
+            currentStaff={currentStaff}
+            onLogout={onLogout}
             onSelectSession={handleSelectSession}
-            onDeleteSession={(id) => {
-              setSessions((prev) => prev.filter((s) => s.id !== id))
-              addToast('success', 'Sesi berhasil dihapus.')
-            }}
           >
             <TriagePage
+              staffUserId={staffUserId}
               onSaveSession={handleSaveSession}
               onBack={() => {
-                setPatientId('')
-                setPatientName('')
+                setSelectedPatient(null)
               }}
             />
           </Shell>
@@ -237,13 +285,31 @@ function AppContent() {
 // ── Root ─────────────────────────────────────────────────────
 
 export default function App() {
+  const [staffUserId, setStaffUserId] = useState<Id<'users'> | null>(() => {
+    return (window.localStorage.getItem('triageos-staff-user-id') as Id<'users'> | null) ?? null
+  })
+
+  function handleAuthenticated(staff: StaffUser) {
+    window.localStorage.setItem('triageos-staff-user-id', staff._id)
+    setStaffUserId(staff._id)
+  }
+
+  function handleLogout() {
+    window.localStorage.removeItem('triageos-staff-user-id')
+    setStaffUserId(null)
+  }
+
   return (
     <ErrorBoundary>
       <ToastProvider>
         <SessionProvider>
           <SpeechProvider>
             <BrowserRouter>
-              <AppContent />
+              {staffUserId ? (
+                <AppContent staffUserId={staffUserId} onLogout={handleLogout} />
+              ) : (
+                <LoginPage onAuthenticated={handleAuthenticated} />
+              )}
             </BrowserRouter>
           </SpeechProvider>
         </SessionProvider>

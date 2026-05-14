@@ -1,3 +1,5 @@
+import type { Id } from '../../convex/_generated/dataModel'
+
 // ============================================================
 // TriageOS MVP - Shared TypeScript Types
 // ============================================================
@@ -21,21 +23,29 @@ export interface TriageNote {
 export interface TriageSession {
   id: string
   patientId: string
+  convexPatientId?: Id<'patients'>
+  selectedPatient?: Patient | null
   patientName?: string
+  patientBpjsId?: string
   transcript: string
   images: string[]      // base64 data URLs
+  uploadedPhotoStorageIds?: Id<'_storage'>[]
   triageNote: TriageNote | null
   timestamp: string     // ISO string (localStorage serialization)
   esiLevel: number | null
   vitals?: VitalSignsInput
+  status?: TriageSessionStatus
 }
 
 // ── Session Form State ───────────────────────────────────────
 
 export interface TriageFormState {
   patientId: string
+  convexPatientId: Id<'patients'> | null
+  selectedPatient: Patient | null
   transcript: string
   images: string[]
+  uploadedPhotoStorageIds: Id<'_storage'>[]
   triageNote: TriageNote | null
   vitals: VitalSignsInput
   isGenerating: boolean
@@ -62,13 +72,20 @@ export type SessionListItem = Pick<TriageSession, 'id' | 'patientId' | 'patientN
 
 export type TriageSavePayload = {
   patientId: string
+  convexPatientId?: Id<'patients'> | null
+  selectedPatient?: Patient | null
   patientName?: string
   transcript: string
   images: string[]
+  uploadedPhotoStorageIds?: Id<'_storage'>[]
   triageNote: TriageNote | null
   esiLevel: number | null
   vitals: VitalSignsInput
+  status?: TriageSessionStatus
 }
+
+export type StaffRole = 'doctor' | 'nurse' | 'admin' | 'staff'
+export type TriageSessionStatus = 'draft' | 'generated' | 'completed'
 
 // ── ESI Color / Label Constants ────────────────────────────
 
@@ -142,6 +159,51 @@ export interface VitalSignsInput {
   gcs?: number         // 3–15
   painScore?: number   // 0–10
 }
+
+export interface ConvexVitalSignsInput {
+  systolicBloodPressure?: number
+  diastolicBloodPressure?: number
+  heartRate?: number
+  spo2?: number
+  temperature?: number
+  respiratoryRate?: number
+  gcs?: number
+  painScore?: number
+}
+
+export interface Patient {
+  _id: Id<'patients'>
+  bpjsId: string
+  bpjsClass?: string
+  nik?: string
+  name: string
+  medicalRecordNumber?: string
+  gender?: string
+  dateOfBirth?: string
+  age?: number
+  phoneNumber?: string
+  address?: string
+  createdAt?: number
+  updatedAt?: number
+}
+
+export type PatientRecord = Patient
+
+export interface StaffUser {
+  _id: Id<'users'>
+  name?: string
+  email?: string
+  avatarUrl?: string
+  image?: string
+  role?: StaffRole
+  createdAt?: number
+  updatedAt?: number
+}
+
+export type DoctorUser = StaffUser
+export type AuthenticatedUser = StaffUser
+export type UserProfile = StaffUser
+export type VitalSigns = VitalSignsInput
 
 // ── Mock Patient ─────────────────────────────────────────────
 
