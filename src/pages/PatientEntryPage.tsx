@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AlertCircle, Clock, Search, ShieldCheck, User } from 'lucide-react'
 import { usePatientActions } from '~/hooks/usePatients'
+import { Button } from '~/components/ui/Button'
 import { formatDOB } from '~/utils/date'
 import type { Patient, SessionListItem } from '~/types'
 import type { Id } from '../../convex/_generated/dataModel'
@@ -114,18 +115,15 @@ export function PatientEntryPage({ staffUserId, sessions, onPatientIdentified }:
                 />
               </div>
 
-              <button
+              <Button
                 type="submit"
+                size="lg"
+                isLoading={isSearching}
                 disabled={!inputId.trim() || isSearching}
-                className={[
-                  'w-full py-2.5 sm:py-3 text-sm font-semibold rounded-xl transition-colors',
-                  'bg-primary-600 text-white hover:bg-primary-700',
-                  'disabled:opacity-50 disabled:cursor-not-allowed',
-                  'focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1',
-                ].join(' ')}
+                className="w-full text-sm"
               >
                 {isSearching ? 'Mencari...' : 'Cari Pasien'}
-              </button>
+              </Button>
             </form>
 
             {error && (
@@ -174,13 +172,14 @@ export function PatientEntryPage({ staffUserId, sessions, onPatientIdentified }:
                     </div>
                   </dl>
 
-                  <button
+                  <Button
                     type="button"
+                    size="lg"
                     onClick={handleStartTriage}
-                    className="w-full py-2.5 sm:py-3 text-sm font-semibold rounded-xl bg-primary-600 text-white hover:bg-primary-700 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1"
+                    className="w-full text-sm"
                   >
                     Mulai Sesi Triage
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}

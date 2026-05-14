@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { useMutation } from 'convex/react'
 import { Lock, Mail, ShieldCheck, UserPlus } from 'lucide-react'
 import { api } from '../../convex/_generated/api'
+import { Button } from '~/components/ui/Button'
 import type { StaffUser } from '~/types'
 
 interface LoginPageProps {
@@ -110,13 +111,14 @@ export function LoginPage({ onAuthenticated }: LoginPageProps) {
               </p>
             )}
 
-            <button
+            <Button
               type="submit"
-              disabled={isLoading}
-              className="w-full py-3 rounded-xl bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700 disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1"
+              size="lg"
+              isLoading={isLoading}
+              className="w-full"
             >
               {isLoading ? 'Memproses...' : mode === 'login' ? 'Masuk' : 'Buat Akun'}
-            </button>
+            </Button>
 
             <button
               type="button"
