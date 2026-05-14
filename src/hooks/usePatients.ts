@@ -1,6 +1,20 @@
 import { useConvex, useQuery } from 'convex/react'
 import { api } from '../../convex/_generated/api'
 import type { Id } from '../../convex/_generated/dataModel'
+import type { Patient } from '~/types'
+
+export type PatientProfileUpdate = Pick<Patient, '_id' | 'name' | 'bpjsId'> &
+  Partial<Pick<
+    Patient,
+    | 'bpjsClass'
+    | 'nik'
+    | 'medicalRecordNumber'
+    | 'gender'
+    | 'dateOfBirth'
+    | 'age'
+    | 'phoneNumber'
+    | 'address'
+  >>
 
 export function usePatientSearchForStaff(staffUserId: Id<'users'> | null, search: string) {
   return useQuery(
@@ -20,5 +34,7 @@ export function usePatientActions(staffUserId: Id<'users'>) {
       convex.query(api.patients.getPatientByBpjsId, { staffUserId, bpjsId }),
     searchPatientsByBpjsIdOrName: (search: string) =>
       convex.query(api.patients.searchPatientsByBpjsIdOrName, { staffUserId, search }),
+    updatePatientProfile: ({ _id, ...patch }: PatientProfileUpdate) =>
+      convex.mutation(api.patients.updatePatientProfile, { staffUserId, patientId: _id, ...patch }),
   }
 }

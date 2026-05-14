@@ -250,6 +250,8 @@ function AppContent({ staffUserId, onLogout }: { staffUserId: Id<'users'>; onLog
           <PatientEntryPage
             staffUserId={staffUserId}
             sessions={sessionListItems}
+            currentStaff={currentStaff}
+            onLogout={onLogout}
             onPatientIdentified={(patient: Patient) => setSelectedPatient(patient)}
           />
         }

@@ -1,9 +1,9 @@
 import { v } from "convex/values"
-import { query, type QueryCtx } from "./_generated/server"
+import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server"
 import type { Id } from "./_generated/dataModel"
 import { requireStaffById } from "./users"
 
-async function requireStaff(ctx: QueryCtx, staffUserId: Id<"users">) {
+async function requireStaff(ctx: QueryCtx | MutationCtx, staffUserId: Id<"users">) {
   return await requireStaffById(ctx, staffUserId)
 }
 
@@ -55,6 +55,48 @@ export const searchPatientsByBpjsIdOrName = query({
         .filter(Boolean)
         .some((value) => value!.toLowerCase().includes(lowerSearch))
     )
+  },
+})
+
+export const updatePatientProfile = mutation({
+  args: {
+    staffUserId: v.id("users"),
+    patientId: v.id("patients"),
+    name: v.string(),
+    bpjsId: v.string(),
+    bpjsClass: v.optional(v.string()),
+    nik: v.optional(v.string()),
+    medicalRecordNumber: v.optional(v.string()),
+    gender: v.optional(v.string()),
+    dateOfBirth: v.optional(v.string()),
+    age: v.optional(v.number()),
+    phoneNumber: v.optional(v.string()),
+    address: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requireStaff(ctx, args.staffUserId)
+    const patient = await ctx.db.get(args.patientId)
+    if (!patient) throw new Error("Patient not found")
+
+    const name = args.name.trim()
+    const bpjsId = args.bpjsId.trim()
+    if (!name || !bpjsId) throw new Error("Nama dan ID BPJS wajib diisi")
+
+    await ctx.db.patch(args.patientId, {
+      name,
+      bpjsId,
+      bpjsClass: args.bpjsClass?.trim() || undefined,
+      nik: args.nik?.trim() || undefined,
+      medicalRecordNumber: args.medicalRecordNumber?.trim() || undefined,
+      gender: args.gender?.trim() || undefined,
+      dateOfBirth: args.dateOfBirth?.trim() || undefined,
+      age: args.age,
+      phoneNumber: args.phoneNumber?.trim() || undefined,
+      address: args.address?.trim() || undefined,
+      updatedAt: Date.now(),
+    })
+
+    return await ctx.db.get(args.patientId)
   },
 })
 
