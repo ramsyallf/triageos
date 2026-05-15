@@ -16,6 +16,6 @@ Keep patient-facing and clinician-facing generated text in formal Bahasa Indones
 
 Preserve ESI levels as `1 | 2 | 3 | 4 | 5`.
 
-Handle Gemini/API failures with user-friendly Indonesian error messages.
+Handle AI provider/API failures with user-friendly Indonesian error messages.
 
 Do not hard-code real EMR or LIS behavior into demo tool calls; keep mock integrations clearly marked until real backend endpoints exist.

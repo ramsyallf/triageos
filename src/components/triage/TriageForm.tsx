@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { Activity } from 'lucide-react'
 import { useSession } from '~/contexts/SessionContext'
-import { useGeminiTriage } from '~/hooks/useGeminiTriage'
+import { useAITriage } from '~/hooks/useAITriage'
 import { useConvexImageUpload } from '~/hooks/useConvexImageUpload'
 import { TranscriptPanel } from '~/components/input/TranscriptPanel'
 import { ImageAttachmentPanel } from '~/components/input/ImageAttachmentPanel'
@@ -33,7 +33,7 @@ interface TriageFormProps {
 
 export function TriageForm({ staffUserId, onSaveSession, onResultChange }: TriageFormProps) {
   const { state, setTriageNote, addImage, removeImage, setVitals, canGenerate } = useSession()
-  const { generate, result, setResult, loading, error } = useGeminiTriage()
+  const { generate, result, setResult, loading, error } = useAITriage(staffUserId)
   const { uploadImages, isUploading, error: uploadError } = useConvexImageUpload(staffUserId)
   const { addToast } = useToast()
 

@@ -3,9 +3,7 @@ FROM oven/bun:1 AS build
 WORKDIR /app
 
 ARG VITE_CONVEX_URL
-ARG VITE_GEMINI_API_KEY
 ENV VITE_CONVEX_URL=$VITE_CONVEX_URL
-ENV VITE_GEMINI_API_KEY=$VITE_GEMINI_API_KEY
 
 COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile
