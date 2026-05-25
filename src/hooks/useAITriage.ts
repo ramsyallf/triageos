@@ -83,7 +83,12 @@ export function useAITriage(staffUserId: Id<'users'>): UseAITriageReturn {
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err)
         const friendlyMessage = getFriendlyMessage(message)
-        const devSuffix = import.meta.env.DEV ? ` (${message.slice(0, 220)})` : ''
+        console.error('[useAITriage] generateTriageNote failed', {
+          message,
+          status: getProviderStatus(message),
+          raw: message,
+        })
+        const devSuffix = import.meta.env.DEV ? ` (${message.slice(0, 1000)})` : ''
         setError(`${friendlyMessage}${devSuffix}`)
         return { result: null }
       } finally {

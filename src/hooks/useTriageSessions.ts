@@ -14,6 +14,7 @@ export function useTriageSessionMutations(staffUserId: Id<'users'>) {
   return {
     createTriageSession: useMutation(api.triageSessions.createTriageSessionForPatient),
     updateTriageSession: useMutation(api.triageSessions.updateTriageSession),
+    linkUploadedImagesToTriageSession: useMutation(api.uploads.linkUploadedImagesToTriageSession),
     getTriageSessionById: (triageSessionId: Id<'triageSessions'>) =>
       convex.query(api.triageSessions.getTriageSessionById, { staffUserId, triageSessionId }),
   }

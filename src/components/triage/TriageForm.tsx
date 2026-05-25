@@ -31,8 +31,25 @@ interface TriageFormProps {
   onResultChange?: (result: import('~/types').TriageNote | null) => void
 }
 
+function readPreviewDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = () => reject(new Error('Gagal membaca file gambar.'))
+    reader.readAsDataURL(file)
+  })
+}
+
 export function TriageForm({ staffUserId, onSaveSession, onResultChange }: TriageFormProps) {
-  const { state, setTriageNote, addImage, removeImage, setVitals, canGenerate } = useSession()
+  const {
+    state,
+    setTriageNote,
+    addImage,
+    removeImage,
+    appendUploadedPhotoStorageIds,
+    setVitals,
+    canGenerate,
+  } = useSession()
   const { generate, result, setResult, loading, error } = useAITriage(staffUserId)
   const { uploadImages, isUploading, error: uploadError } = useConvexImageUpload(staffUserId)
   const { addToast } = useToast()
@@ -92,8 +109,22 @@ export function TriageForm({ staffUserId, onSaveSession, onResultChange }: Triag
   }
 
   async function handleAddImages(files: FileList | File[]) {
-    const uploadedImages = await uploadImages(files)
-    uploadedImages.forEach((image) => addImage(image.previewDataUrl, image.storageId))
+    const imageFiles = Array.from(files).filter((file) => file.type.startsWith('image/'))
+    if (imageFiles.length === 0) return
+
+    try {
+      const previews = await Promise.all(imageFiles.map(readPreviewDataUrl))
+      previews.forEach((previewDataUrl) => addImage(previewDataUrl))
+    } catch {
+      addToast('error', 'Gagal membaca file gambar.')
+      return
+    }
+
+    const uploadedImages = await uploadImages(imageFiles)
+    const storageIds = uploadedImages.map((image) => image.storageId)
+    if (storageIds.length > 0) {
+      appendUploadedPhotoStorageIds(storageIds)
+    }
   }
 
   function handleRemoveImage(index: number) {
@@ -182,7 +213,7 @@ export function TriageForm({ staffUserId, onSaveSession, onResultChange }: Triag
 
       {/* Generate Button */}
       <GenerateButton
-        canGenerate={canGenerate && !state.viewingSessionId}
+        canGenerate={canGenerate && !state.viewingSessionId && !isUploading}
         isLoading={loading}
         onClick={handleGenerate}
       />

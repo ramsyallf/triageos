@@ -10,6 +10,12 @@ interface TriageResultProps {
   onEdit?: (note: TriageNote) => void
 }
 
+function formatConfidenceScore(score?: number): string | null {
+  if (score === undefined || score === null) return null
+  const percent = score > 0 && score <= 1 ? score * 100 : score
+  return `${Math.round(Math.max(0, Math.min(100, percent)))}%`
+}
+
 export function TriageResult({ note, onSave, onEdit }: TriageResultProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [draft, setDraft] = useState<TriageNote>(note)
@@ -32,6 +38,7 @@ export function TriageResult({ note, onSave, onEdit }: TriageResultProps) {
   }
 
   const esiLevel = note.esiLevel as 1 | 2 | 3 | 4 | 5
+  const confidenceLabel = formatConfidenceScore(note.confidenceScore)
 
   const riskLevelColor: Record<RiskLevel, string> = {
     High: 'bg-red-500',
@@ -118,10 +125,10 @@ export function TriageResult({ note, onSave, onEdit }: TriageResultProps) {
             <span className={`inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-semibold text-white ${riskLevelColor[note.riskLevel]}`}>
               Risk: {note.riskLevel}
             </span>
-            {note.confidenceScore !== undefined && (
+            {confidenceLabel && (
               <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-[10px] sm:text-xs font-medium border border-gray-200" title="Tingkat kepercayaan AI terhadap hasil triage">
                 <Target className="h-2.5 w-2.5 text-gray-400" />
-                {note.confidenceScore}%
+                {confidenceLabel}
               </span>
             )}
           </div>

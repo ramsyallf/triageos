@@ -24,6 +24,12 @@ const ESI_COLORS: Record<number, string> = {
   5: '#2563eb',
 }
 
+function formatConfidenceScore(score?: number): string {
+  if (score === undefined || score === null) return 'N/A'
+  const percent = score > 0 && score <= 1 ? score * 100 : score
+  return `${Math.round(Math.max(0, Math.min(100, percent)))}`
+}
+
 export function PrintLayout({ note, patientId, patientName, vitals, timestamp }: PrintLayoutProps) {
   const date = timestamp ? new Date(timestamp).toLocaleString('id-ID', {
     weekday: 'long',
@@ -43,6 +49,7 @@ export function PrintLayout({ note, patientId, patientName, vitals, timestamp }:
 
   const esiColor = ESI_COLORS[note.esiLevel] || '#6b7280'
   const riskColor = note.riskLevel === 'High' ? '#dc2626' : note.riskLevel === 'Medium' ? '#ca8a04' : '#16a34a'
+  const confidenceLabel = formatConfidenceScore(note.confidenceScore)
 
   return (
     <div className="print-only hidden print:block p-6 bg-white">
@@ -82,7 +89,7 @@ export function PrintLayout({ note, patientId, patientName, vitals, timestamp }:
           </div>
           <div>
             <p className="font-bold text-base">{ESI_LABELS[note.esiLevel] || ''}</p>
-            <p className="text-xs text-gray-600">Confidence: {note.confidenceScore || 'N/A'}%</p>
+            <p className="text-xs text-gray-600">Confidence: {confidenceLabel}%</p>
           </div>
         </div>
         <div

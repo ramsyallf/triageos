@@ -28,7 +28,7 @@ interface ShellProps {
 }
 
 function Shell({ children, allSessions, activeSessionId, currentStaff, onLogout, onSelectSession }: ShellProps) {
-  const { resetTriage, setSelectedPatient } = useSession()
+  const { resetTriage } = useSession()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const navigate = useNavigate()
   const sessions = allSessions
@@ -96,8 +96,7 @@ function Shell({ children, allSessions, activeSessionId, currentStaff, onLogout,
           <button
             onClick={() => {
               resetTriage()
-              setSelectedPatient(null)
-              navigate('/')
+              navigate('/triage')
             }}
             className={[
               'mt-2.5 sm:mt-3 w-full flex items-center justify-center gap-2 py-1.5 sm:py-2 rounded-xl',
@@ -176,7 +175,12 @@ function AppContent({ staffUserId, onLogout }: { staffUserId: Id<'users'>; onLog
   const { addToast } = useToast()
   const currentStaff = useCurrentUser(staffUserId)
   const recentSessions = useRecentTriageSessions(currentStaff ? staffUserId : null, 25) ?? []
-  const { createTriageSession, updateTriageSession, getTriageSessionById } = useTriageSessionMutations(staffUserId)
+  const {
+    createTriageSession,
+    updateTriageSession,
+    linkUploadedImagesToTriageSession,
+    getTriageSessionById,
+  } = useTriageSessionMutations(staffUserId)
 
   useEffect(() => {
     if (currentStaff === null) onLogout()
@@ -194,7 +198,13 @@ function AppContent({ staffUserId, onLogout }: { staffUserId: Id<'users'>; onLog
 
   async function handleSelectSession(session: SessionListItem) {
     const full = await getTriageSessionById(session.id as Id<'triageSessions'>)
-    loadSession(toTriageSession(full))
+    const mapped = toTriageSession(full)
+    console.log('[AppContent] loaded history session', {
+      sessionId: mapped.id,
+      imageCount: mapped.images.length,
+      storageIdCount: mapped.uploadedPhotoStorageIds?.length ?? 0,
+    })
+    loadSession(mapped)
   }
 
   async function handleSaveSession(session: TriageSavePayload): Promise<Id<'triageSessions'> | null> {
@@ -217,6 +227,13 @@ function AppContent({ staffUserId, onLogout }: { staffUserId: Id<'users'>; onLog
         triageSessionId: state.viewingSessionId as Id<'triageSessions'>,
         ...payload,
       })
+      if ((session.uploadedPhotoStorageIds ?? []).length > 0) {
+        await linkUploadedImagesToTriageSession({
+          staffUserId,
+          triageSessionId: state.viewingSessionId as Id<'triageSessions'>,
+          storageIds: session.uploadedPhotoStorageIds ?? [],
+        })
+      }
       addToast('success', 'Sesi triage berhasil diperbarui di Convex.')
       return state.viewingSessionId as Id<'triageSessions'>
     }
@@ -226,6 +243,13 @@ function AppContent({ staffUserId, onLogout }: { staffUserId: Id<'users'>; onLog
       patientId: session.convexPatientId,
       ...payload,
     })
+    if ((session.uploadedPhotoStorageIds ?? []).length > 0) {
+      await linkUploadedImagesToTriageSession({
+        staffUserId,
+        triageSessionId,
+        storageIds: session.uploadedPhotoStorageIds ?? [],
+      })
+    }
 
     const savedSession: TriageSession = {
       id: triageSessionId,

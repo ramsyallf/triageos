@@ -21,6 +21,7 @@ type SessionAction =
   | { type: 'ADD_IMAGE'; payload: { previewDataUrl: string; storageId?: Id<'_storage'> } }
   | { type: 'REMOVE_IMAGE'; payload: number }
   | { type: 'SET_UPLOADED_IMAGE_IDS'; payload: Id<'_storage'>[] }
+  | { type: 'APPEND_UPLOADED_IMAGE_IDS'; payload: Id<'_storage'>[] }
   | { type: 'SET_TRIAGE_NOTE'; payload: TriageNote }
   | { type: 'SET_GENERATING'; payload: boolean }
   | { type: 'SET_SAVING'; payload: boolean }
@@ -96,6 +97,8 @@ function sessionReducer(state: SessionState, action: SessionAction): SessionStat
       }
     case 'SET_UPLOADED_IMAGE_IDS':
       return { ...state, uploadedPhotoStorageIds: action.payload }
+    case 'APPEND_UPLOADED_IMAGE_IDS':
+      return { ...state, uploadedPhotoStorageIds: [...state.uploadedPhotoStorageIds, ...action.payload] }
     case 'SET_TRIAGE_NOTE':
       return { ...state, triageNote: action.payload }
     case 'SET_GENERATING':
@@ -166,6 +169,7 @@ interface SessionContextValue {
   addImage: (previewDataUrl: string, storageId?: Id<'_storage'>) => void
   removeImage: (index: number) => void
   setUploadedPhotoStorageIds: (ids: Id<'_storage'>[]) => void
+  appendUploadedPhotoStorageIds: (ids: Id<'_storage'>[]) => void
   setTriageNote: (note: TriageNote) => void
   setGenerating: (v: boolean) => void
   setSaving: (v: boolean) => void
@@ -195,6 +199,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     addImage: (previewDataUrl, storageId) => dispatch({ type: 'ADD_IMAGE', payload: { previewDataUrl, storageId } }),
     removeImage: (index) => dispatch({ type: 'REMOVE_IMAGE', payload: index }),
     setUploadedPhotoStorageIds: (ids) => dispatch({ type: 'SET_UPLOADED_IMAGE_IDS', payload: ids }),
+    appendUploadedPhotoStorageIds: (ids) => dispatch({ type: 'APPEND_UPLOADED_IMAGE_IDS', payload: ids }),
     setTriageNote: (note) => dispatch({ type: 'SET_TRIAGE_NOTE', payload: note }),
     setGenerating: (v) => dispatch({ type: 'SET_GENERATING', payload: v }),
     setSaving: (v) => dispatch({ type: 'SET_SAVING', payload: v }),

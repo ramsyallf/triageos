@@ -37,6 +37,12 @@ const ESI_COLORS: Record<number, string> = {
   5: '#2563eb',
 }
 
+function formatConfidenceScore(score?: number): string {
+  if (score === undefined || score === null) return 'N/A'
+  const percent = score > 0 && score <= 1 ? score * 100 : score
+  return `${Math.round(Math.max(0, Math.min(100, percent)))}`
+}
+
 export function PrintButton({ note, patientId, patientName, vitals, timestamp, nurseName }: PrintButtonProps) {
   const [showMenu, setShowMenu] = useState(false)
 
@@ -125,6 +131,7 @@ function generateTextContent(
   nurseName?: string
 ): string {
   const date = timestamp ? new Date(timestamp).toLocaleString('id-ID') : new Date().toLocaleString('id-ID')
+  const confidenceLabel = formatConfidenceScore(note.confidenceScore)
 
   let content = `
 ================================================================================
@@ -141,7 +148,7 @@ Nurse     : ${nurseName || '................................'}
 
 ESI LEVEL     : ${note.esiLevel} - ${ESI_LABELS[note.esiLevel] || ''}
 Risk Level    : ${note.riskLevel}
-Confidence    : ${note.confidenceScore || 'N/A'}%
+Confidence    : ${confidenceLabel}%
 
 --------------------------------------------------------------------------------
 KELUHAN UTAMA
@@ -187,6 +194,7 @@ function generateHTMLContent(
 ): string {
   const date = timestamp ? new Date(timestamp).toLocaleString('id-ID') : new Date().toLocaleString('id-ID')
   const esiColor = ESI_COLORS[note.esiLevel] || '#6b7280'
+  const confidenceLabel = formatConfidenceScore(note.confidenceScore)
 
   return `<!DOCTYPE html>
 <html lang="id">
@@ -252,7 +260,7 @@ function generateHTMLContent(
       <div class="esi-badge">ESI-${note.esiLevel}</div>
       <div class="esi-info">
         ${ESI_LABELS[note.esiLevel] || ''}
-        <small>Confidence: ${note.confidenceScore || 'N/A'}%</small>
+        <small>Confidence: ${confidenceLabel}%</small>
       </div>
     </div>
     <span class="risk-badge">Risk: ${note.riskLevel}</span>

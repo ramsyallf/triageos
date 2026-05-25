@@ -49,6 +49,27 @@ async function requireOwnSession(ctx: QueryCtx | MutationCtx, staffUserId: Id<"u
   return { userId, session }
 }
 
+async function resolveSessionImageUrls(
+  ctx: QueryCtx,
+  sessionId: Id<"triageSessions">,
+  uploadedPhotoStorageIds: Id<"_storage">[]
+) {
+  const uploadedImages = await ctx.db
+    .query("uploadedImages")
+    .withIndex("by_session", (q) => q.eq("triageSessionId", sessionId))
+    .collect()
+
+  const storageIds = Array.from(
+    new Set([
+      ...uploadedPhotoStorageIds,
+      ...uploadedImages.map((image) => image.storageId),
+    ])
+  )
+
+  const urls = await Promise.all(storageIds.map((storageId) => ctx.storage.getUrl(storageId)))
+  return urls.filter((url): url is string => url !== null)
+}
+
 export const createTriageSessionForPatient = mutation({
   args: {
     staffUserId: v.id("users"),
@@ -103,7 +124,14 @@ export const getTriageSessionById = query({
   handler: async (ctx, args) => {
     const { session } = await requireOwnSession(ctx, args.staffUserId, args.triageSessionId)
     const patient = await ctx.db.get(session.patientId)
-    return { ...session, patient }
+    const imageUrls = await resolveSessionImageUrls(ctx, session._id, session.uploadedPhotoStorageIds)
+    console.log("[triageSessions:getTriageSessionById] image resolution", {
+      sessionId: session._id,
+      storageIdCount: session.uploadedPhotoStorageIds.length,
+      imageUrlCount: imageUrls.length,
+    })
+
+    return { ...session, patient, imageUrls, uploadedPhotoUrls: imageUrls }
   },
 })
 
@@ -131,10 +159,16 @@ export const listMyRecentTriageSessions = query({
       .take(args.limit ?? 25)
 
     return await Promise.all(
-      sessions.map(async (session) => ({
-        ...session,
-        patient: await ctx.db.get(session.patientId),
-      }))
+      sessions.map(async (session) => {
+        const imageUrls = await resolveSessionImageUrls(ctx, session._id, session.uploadedPhotoStorageIds)
+
+        return {
+          ...session,
+          patient: await ctx.db.get(session.patientId),
+          imageUrls,
+          uploadedPhotoUrls: imageUrls,
+        }
+      })
     )
   },
 })

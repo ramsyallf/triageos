@@ -14,6 +14,8 @@ type RecentTriageSession = {
   uploadedPhotoStorageIds: Id<'_storage'>[]
   vitalSigns: ConvexVitalSignsInput
   generatedTriageNote?: TriageSession['triageNote']
+  imageUrls?: string[]
+  uploadedPhotoUrls?: string[]
   status?: TriageSession['status']
   createdAt: number
   updatedAt: number
@@ -58,6 +60,8 @@ export function toSessionListItem(session: RecentTriageSession): SessionListItem
 }
 
 export function toTriageSession(session: RecentTriageSession): TriageSession {
+  const images = session.imageUrls ?? session.uploadedPhotoUrls ?? []
+
   return {
     id: session._id,
     patientId: session.patient?.bpjsId ?? session.patientId,
@@ -66,7 +70,7 @@ export function toTriageSession(session: RecentTriageSession): TriageSession {
     patientName: session.patient?.name,
     patientBpjsId: session.patient?.bpjsId,
     transcript: session.anamnesisText,
-    images: [],
+    images,
     uploadedPhotoStorageIds: session.uploadedPhotoStorageIds,
     triageNote: session.generatedTriageNote ?? null,
     timestamp: new Date(session.updatedAt).toISOString(),
